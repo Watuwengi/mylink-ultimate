@@ -1,101 +1,48 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>MyLink Ultimate • Phone</title>
+  <title>MyLink • Phone</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { margin:0; background:#000; color:#00ff9d; font-family:Arial; text-align:center; padding:20px; }
+    body { margin:0; background:#000; color:#00ff9d; text-align:center; padding:20px; }
+    button { padding:16px 32px; margin:15px; background:#00ff9d; color:#000; border:none; border-radius:50px; font-weight:bold; }
     video { width:100%; max-width:600px; border:4px solid #00ff9d; border-radius:16px; }
-    button { padding:16px 32px; margin:10px; background:#00ff9d; color:#000; border:none; border-radius:50px; font-size:18px; font-weight:bold; cursor:pointer; }
-    input, textarea { width:90%; padding:12px; margin:10px; border-radius:12px; border:none; background:#111; color:white; }
-    .tab { padding:15px; background:#111; margin:10px; border-radius:12px; }
-    #status { font-size:20px; margin:20px; }
+    .file { background:#111; padding:15px; margin:10px; border-radius:12px; }
   </style>
 </head>
 <body>
-  <h1>🇰🇪 MyLink Ultimate</h1>
-  <div id="status">Connecting to laptop...</div>
-
-  <button onclick="startScreen()">📱 SHARE SCREEN</button>
+  <h1>MyLink Connected</h1>
+  <button onclick="share()">START SCREEN SHARE</button>
   <video id="screen" autoplay playsinline muted></video>
 
-  <div class="tab">
-    <h2>📸 Camera</h2>
-    <select id="camSelect"><option>Front</option><option>Back</option></select>
-    <button onclick="startCamera()">Open Camera</button>
-    <video id="cam" autoplay playsinline></video>
-  </div>
-
-  <div class="tab">
-    <h2>💬 SMS</h2>
-    <button onclick="requestSMS()">Load Messages</button>
-    <div id="smsList" style="text-align:left; max-height:300px; overflow-y:auto;"></div>
-    <input id="smsNumber" placeholder="Phone number" />
-    <textarea id="smsText" placeholder="Type message"></textarea>
-    <button onclick="sendSMS()">Send SMS</button>
-  </div>
-
-  <div class="tab">
-    <h2>📁 Files from Laptop</h2>
-    <div id="fileList"></div>
-  </div>
+  <h2>Files from Laptop</h2>
+  <div id="files"></div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    const socket = io({ query: { token: new URLSearchParams(location.search).get('t') } });
-    let screenStream = null;
-    let camStream = null;
+    const socket = io({ query: { t: location.search.split('t=')[1] || '' } });
+    let pc = null;
 
-    socket.on('connect', () => {
-      document.getElementById('status').innerHTML = '✅ Connected! Ready.';
-    });
-
-    // === SCREEN SHARE ===
-    function startScreen() {
+    function share() {
       navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
         .then(stream => {
-          screenStream = stream;
           document.getElementById('screen').srcObject = stream;
-          const pc = new RTCPeerConnection();
+          pc = new RTCPeerConnection();
           stream.getTracks().forEach(t => pc.addTrack(t, stream));
-          pc.createOffer().then(offer => {
-            pc.setLocalDescription(offer);
-            socket.emit('offer', offer);
+          pc.createOffer().then(o => {
+            pc.setLocalDescription(o);
+            socket.emit('offer', o);
           });
           socket.on('answer', a => pc.setRemoteDescription(a));
         })
         .catch(() => alert('Allow screen sharing'));
     }
 
-    // === CAMERA ===
-    async function startCamera() {
-      const facing = document.getElementById('camSelect').value === 'Back' ? 'environment' : 'user';
-      camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing } });
-      document.getElementById('cam').srcObject = camStream;
-    }
-
-    // === SMS (Android only — works on Tecno Spark 20 with Chrome) ===
-    async function requestSMS() {
-      if (!('android' in window)) return alert('Android only');
-      const msgs = await android.getSMS();
-      document.getElementById('smsList').innerHTML = msgs.map(m => 
-        `<div style="background:#111;padding:10px;margin:5px;border-radius:8px;">
-          <b>${m.address}</b>: ${m.body}<br><small>${new Date(m.date).toLocaleString()}</small>
-        </div>`).join('');
-    }
-
-    async function sendSMS() {
-      const num = document.getElementById('smsNumber').value;
-      const txt = document.getElementById('smsText').value;
-      if (!num || !txt) return;
-      await android.sendSMS(num, txt);
-      alert('SMS sent!');
-    }
-
-    // === BACKGROUND MODE (Service Worker) ===
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js');
-    }
+    socket.on('newfiles', files => {
+      document.getElementById('files').innerHTML += files.map(f =>
+        `<div class="file"><a href="${f.path}" download="${f.name}">${f.name}</a></div>`
+      ).join('');
+    });
   </script>
 </body>
 </html>
