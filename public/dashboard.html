@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MyLink Ultimate • Kenya</title>
+  <style>
+    :root {
+      --bg: #0f0f1a;
+      --card: #1a1a2e;
+      --accent: #00ff9d;
+      --text: #e0e0e0;
+      --red: #ff3366;
+    }
+    body {
+      margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif;
+      background: var(--bg); color: var(--text); min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .container {
+      background: var(--card); padding: 30px; border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,255,157,0.2); width: 90%; max-width: 500px;
+      text-align: center;
+    }
+    h1 { color: var(--accent); margin-bottom: 10px; }
+    input, button, select {
+      width: 100%; padding: 14px; margin: 12px 0; border-radius: 12px; border: none;
+      font-size: 16px;
+    }
+    input { background: #16213e; color: white; }
+    button {
+      background: var(--accent); color: #000; font-weight: bold; cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover { background: #00cc7a; transform: scale(1.03); }
+    #qr, #remoteVideo { margin: 20px 0; width: 100%; max-width: 400px; border-radius: 12px; }
+    #status { margin: 15px 0; font-weight: bold; }
+    .files { margin-top: 20px; text-align: left; }
+    .file-item { background: #16213e; padding: 10px; margin: 8px 0; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🇰🇪 MyLink Ultimate</h1>
+    <p>Control your phone from anywhere</p>
+
+    <input type="text" id="target" placeholder="Email or Phone (+254...)" />
+    <button onclick="sendLink()">🚀 SEND MAGIC LINK</button>
+
+    <div id="status"></div>
+    <div id="qr"></div>
+
+    <h2>📱 Phone Screen</h2>
+    <video id="remoteVideo" autoplay playsinline controls></video>
+
+    <h2>📁 Files</h2>
+    <div class="files" id="fileList"></div>
+    <input type="file" id="fileInput" multiple />
+    <button onclick="uploadFiles()">Upload to Phone</button>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const video = document.getElementById('remoteVideo');
+
+    socket.on('offer', async (offer) => {
+      const pc = new RTCPeerConnection();
+      pc.setRemoteDescription(offer);
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      socket.emit('answer', answer);
+
+      pc.ontrack = (e) => video.srcObject = e.streams[0];
+    });
+
+    async function sendLink() {
+      const target = document.getElementById('target').value.trim();
+      if (!target) return status("Enter email or phone");
+
+      document.getElementById('status').innerHTML = "Generating link...";
+      const res = await fetch(`/link?target=${encodeURIComponent(target)}`);
+      const msg = await res.text();
+      document.getElementById('status').innerHTML = msg;
+
+      // Show QR
+      const qrImg = document.createElement('img');
+      qrImg.src = `/qr?t=${Date.now()}`;
+      document.getElementById('qr').innerHTML = '';
+      document.getElementById('qr').appendChild(qrImg);
+    }
+
+    function status(msg) {
+      document.getElementById('status').innerHTML = `<p style="color:var(--accent)">${msg}</p>`;
+    }
+  </script>
+</body>
+</html>
