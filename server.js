@@ -3,41 +3,71 @@ const http = require('http');
 const { Server } = require('socket.io');
 const multer = require('multer');
 const path = require('path');
-const qrcode = require('qrcode');
-const bcrypt = require('bcrypt');
+const twilio = require('twilio');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
+// Static files
 app.use(express.static('public'));
-app.use('/files', express.static(path.join(__dirname, 'uploads')));
+app.use('/files', express.static('uploads'));
 const upload = multer({ dest: 'uploads/' });
 
-// Twilio SMS (free trial → 100 SMS/month)
-const twilio = require('twilio')(
-  process.env.TWILIO_SID || 'YOUR_TWILIO_SID',
-  process.env.TWILIO_TOKEN || 'YOUR_TWILIO_TOKEN'
-);
+// Twilio Client (your number: +14406932146)
+let client = null;
+if (process.env.TWILIO_SID && process.env.TWILIO_TOKEN) {
+  client = twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
+}
 
-const phones = new Map(); // token → phone data
-
+// Routes
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
 app.get('/phone', (req, res) => res.sendFile(path.join(__dirname, 'public', 'phone.html')));
-app.get('/qr', async (req, res) => {
-  const token = req.query.t || Date.now().toString(36);
-  const url = `${req.protocol}://${req.get('host')}/phone?t=${token}`;
-  const qr = await qrcode.toDataURL(url);
-  res.send(`<img src="${qr}" /><br><a href="${url}">${url}</a>`);
+
+// SEND MAGIC LINK VIA SMS (Kenya-ready)
+app.get('/link', async (req, res) => {
+  const target = req.query.target?.trim();
+  if (!target) return res.send('<p style="color:red">Enter number</p>');
+
+  const token = Date.now().toString(36);
+  const link = `${req.protocol}://${req.get('host')}/phone?t=${token}`;
+
+  let sent = false;
+  if (target && client && process.env.TWILIO_NUMBER) {
+    const to = target.startsWith('0') ? '+254' + target.slice(1) : target;
+    try {
+      await client.messages.create({
+        body: `MyLink Ultimate\nConnect your phone now:\n${link}`,
+        from: process.env.TWILIO_NUMBER,  // +14406932146
+        to: to
+      });
+      sent = true;
+    } catch (e) {
+      console.error("SMS failed:", e.message);
+    }
+  }
+
+  res.send(sent 
+    ? `<p style="color:#00ff9d">SMS sent to ${target}!</p>`
+    : `<p style="color:#ff3366">SMS failed. Check Twilio secrets.</p><p>Direct link: <a href="${link}">${link}</a></p>`
+  );
+});
+
+// File upload from laptop
+app.post('/upload', upload.array('files'), (req, res) => {
+  const files = req.files.map(f => ({
+    name: f.originalname,
+    path: `/files/${f.filename}`
+  }));
+  io.emit('newfiles', files);
+  res.send('Uploaded!');
 });
 
 io.on('connection', (socket) => {
-  const token = socket.handshake.query.token;
-  phones.set(token, { socket, online: true });
-  socket.on('disconnect', () => phones.delete(token));
+  console.log('Connected:', socket.id);
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`MYLINK ULTIMATE LIVE → https://mylink-ultimate.onrender.com`);
+  console.log(`MyLink Ultimate LIVE → https://your-app.onrender.com`);
 });
