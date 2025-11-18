@@ -1,57 +1,103 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>MyLink Ultimate • Kenya</title>
   <style>
-    body { margin:0; background:#0f0f1a; color:#e0e0e0; font-family:Arial; text-align:center; padding:20px; }
-    .box { background:#1a1a2e; padding:30px; border-radius:20px; max-width:500px; margin:auto; }
-    input, button { width:100%; padding:15px; margin:10px 0; border-radius:12px; border:none; font-size:16px; }
-    input { background:#16213e; color:white; }
-    button { background:#00ff9d; color:black; font-weight:bold; cursor:pointer; }
-    video { width:100%; max-width:600px; border:4px solid #00ff9d; border-radius:16px; margin:20px 0; background:#000; }
+    :root {
+      --bg: #0f0f1a;
+      --card: #1a1a2e;
+      --accent: #00ff9d;
+      --text: #e0e0e0;
+      --red: #ff3366;
+    }
+    body {
+      margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif;
+      background: var(--bg); color: var(--text); min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .container {
+      background: var(--card); padding: 30px; border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,255,157,0.2); width: 90%; max-width: 500px;
+      text-align: center;
+    }
+    h1 { color: var(--accent); margin-bottom: 10px; }
+    input, button {
+      width: 100%; padding: 16px; margin: 12px 0; border-radius: 12px; border: none;
+      font-size: 16px;
+    }
+    input { background: #16213e; color: white; }
+    button {
+      background: var(--accent); color: #000; font-weight: bold; cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover { background: #00cc7a; transform: scale(1.03); }
+    #status { margin: 20px 0; font-size: 18px; min-height: 50px; }
+    video { width: 100%; max-width: 600px; border: 4px solid var(--accent); border-radius: 16px; margin: 20px 0; background:#000; }
+    .files { margin-top: 20px; }
+    .file-input { margin: 15px 0; }
   </style>
 </head>
 <body>
-  <div class="box">
+  <div class="container">
     <h1>MyLink Ultimate</h1>
-    <input id="num" placeholder="+254712345678 or 0712345678">
-    <button onclick="send()">SEND SMS LINK</button>
+    <p>Type email or Kenyan phone number</p>
+
+    <input type="text" id="target" placeholder="example a@gmail.com OR +254712345678" />
+    <button onclick="sendLink()">SEND LINK</button>
+
     <div id="status"></div>
 
     <h2>Phone Screen</h2>
-    <video id="video" autoplay playsinline controls></video>
+    <video id="remoteVideo" autoplay playsinline controls></video>
 
-    <h2>Send Files</h2>
-    <input type="file" id="files" multiple>
-    <button onclick="upload()">UPLOAD TO PHONE</button>
+    <h2>Send Files to Phone</h2>
+    <input type="file" id="fileInput" class="file-input" multiple />
+    <button onclick="uploadFiles()">UPLOAD FILES</button>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
-    const video = document.getElementById('video');
+    const video = document.getElementById('remoteVideo');
 
+    // WebRTC — receive phone screen
     socket.on('offer', async (offer) => {
       const pc = new RTCPeerConnection();
       pc.setRemoteDescription(offer);
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
       socket.emit('answer', answer);
-      pc.ontrack = e => video.srcObject = e.streams[0];
+      pc.ontrack = (e) => video.srcObject = e.streams[0];
     });
 
-    async function send() {
-      const n = document.getElementById('num').value.trim();
-      const res = await fetch(`/link?target=${n}`);
-      document.getElementById('status').innerHTML = await res.text();
+    // Send magic link (email or SMS via Gmail)
+    async function sendLink() {
+      const target = document.getElementById('target').value.trim();
+      if (!target) return setStatus("Enter email or phone", "red");
+
+      setStatus("Sending link...", "white");
+      const res = await fetch(`/send?target=${encodeURIComponent(target)}`);
+      const text = await res.text();
+      document.getElementById('status').innerHTML = text;
     }
 
-    function upload() {
+    // Upload files to phone
+    function uploadFiles() {
+      const files = document.getElementById('fileInput').files;
+      if (files.length === 0) return setStatus("Select files first", "red");
+
       const form = new FormData();
-      for (let f of document.getElementById('files').files) form.append('files', f);
-      fetch('/upload', { method: 'POST', body: form });
+      for (let f of files) form.append('files', f);
+
+      fetch('/upload', { method: 'POST', body: form })
+        .then(() => setStatus(`${files.length} file(s) sent to phone!`, "#00ff9d"))
+        .catch(() => setStatus("Upload failed", "red"));
+    }
+
+    function setStatus(msg, color) {
+      document.getElementById('status').innerHTML = `<p style="color:${color}">${msg}</p>`;
     }
   </script>
 </body>
