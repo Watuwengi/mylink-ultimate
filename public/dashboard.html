@@ -35,8 +35,6 @@
     button:hover { background: #00cc7a; transform: scale(1.03); }
     #status { margin: 20px 0; font-size: 18px; min-height: 50px; }
     video { width: 100%; max-width: 600px; border: 4px solid var(--accent); border-radius: 16px; margin: 20px 0; background:#000; }
-    .files { margin-top: 20px; }
-    .file-input { margin: 15px 0; }
   </style>
 </head>
 <body>
@@ -44,17 +42,13 @@
     <h1>MyLink Ultimate</h1>
     <p>Type email or Kenyan phone number</p>
 
-    <input type="text" id="target" placeholder="example a@gmail.com OR +254712345678" />
+    <input type="text" id="target" placeholder="example@gmail.com OR +254712345678" />
     <button onclick="sendLink()">SEND LINK</button>
 
     <div id="status"></div>
 
     <h2>Phone Screen</h2>
     <video id="remoteVideo" autoplay playsinline controls></video>
-
-    <h2>Send Files to Phone</h2>
-    <input type="file" id="fileInput" class="file-input" multiple />
-    <button onclick="uploadFiles()">UPLOAD FILES</button>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
@@ -62,7 +56,7 @@
     const socket = io();
     const video = document.getElementById('remoteVideo');
 
-    // WebRTC — receive phone screen
+    // Receive phone screen (WebRTC)
     socket.on('offer', async (offer) => {
       const pc = new RTCPeerConnection();
       pc.setRemoteDescription(offer);
@@ -72,32 +66,18 @@
       pc.ontrack = (e) => video.srcObject = e.streams[0];
     });
 
-    // Send magic link (email or SMS via Gmail)
+    // Send magic link via /send route (email or SMS)
     async function sendLink() {
       const target = document.getElementById('target').value.trim();
-      if (!target) return setStatus("Enter email or phone", "red");
+      if (!target) {
+        document.getElementById('status').innerHTML = '<p style="color:var(--red)">Enter email or phone</p>';
+        return;
+      }
 
-      setStatus("Sending link...", "white");
+      document.getElementById('status').innerHTML = '<p style="color:white">Sending...</p>';
       const res = await fetch(`/send?target=${encodeURIComponent(target)}`);
-      const text = await res.text();
-      document.getElementById('status').innerHTML = text;
-    }
-
-    // Upload files to phone
-    function uploadFiles() {
-      const files = document.getElementById('fileInput').files;
-      if (files.length === 0) return setStatus("Select files first", "red");
-
-      const form = new FormData();
-      for (let f of files) form.append('files', f);
-
-      fetch('/upload', { method: 'POST', body: form })
-        .then(() => setStatus(`${files.length} file(s) sent to phone!`, "#00ff9d"))
-        .catch(() => setStatus("Upload failed", "red"));
-    }
-
-    function setStatus(msg, color) {
-      document.getElementById('status').innerHTML = `<p style="color:${color}">${msg}</p>`;
+      const html = await res.text();
+      document.getElementById('status').innerHTML = html;
     }
   </script>
 </body>
