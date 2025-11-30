@@ -1,30 +1,29 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>MyLink • Phone</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MyLink Phone</title>
   <style>
-    body { margin:0; background:#000; color:#00ff9d; text-align:center; padding:20px; }
-    button { padding:16px 32px; margin:15px; background:#00ff9d; color:#000; border:none; border-radius:50px; font-weight:bold; }
-    video { width:100%; max-width:600px; border:4px solid #00ff9d; border-radius:16px; }
-    .file { background:#111; padding:15px; margin:10px; border-radius:12px; }
+    body{background:#000;color:#0f9;text-align:center;padding:20px}
+    button{padding:15px 30px;background:#0f9;color:#000;border:none;border-radius:10px;font-size:18px}
+    video{width:100%;border:3px solid #0f9;border-radius:10px}
+    .file{background:#111;padding:15px;margin:10px;border-radius:10px}
   </style>
 </head>
 <body>
   <h1>MyLink Connected</h1>
   <button onclick="share()">START SCREEN SHARE</button>
   <video id="screen" autoplay playsinline muted></video>
-
   <h2>Files from Laptop</h2>
   <div id="files"></div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    const socket = io({ query: { t: location.search.split('t=')[1] || '' } });
+    const socket = io();
     let pc = null;
 
     function share() {
-      navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
+      navigator.mediaDevices.getDisplayMedia({video:true,audio:true})
         .then(stream => {
           document.getElementById('screen').srcObject = stream;
           pc = new RTCPeerConnection();
@@ -34,14 +33,16 @@
             socket.emit('offer', o);
           });
           socket.on('answer', a => pc.setRemoteDescription(a));
-        })
-        .catch(() => alert('Allow screen sharing'));
+        });
     }
 
     socket.on('newfiles', files => {
-      document.getElementById('files').innerHTML += files.map(f =>
-        `<div class="file"><a href="${f.path}" download="${f.name}">${f.name}</a></div>`
-      ).join('');
+      files.forEach(f => {
+        const div = document.createElement('div');
+        div.className = 'file';
+        div.innerHTML = `<a href="${f.path}" download="${f.name}">${f.name}</a>`;
+        document.getElementById('files').appendChild(div);
+      });
     });
   </script>
 </body>
