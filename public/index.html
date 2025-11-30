@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MyLink Ultimate</title>
+  <style>
+    body{background:#000;color:#0f9;font-family:Arial;text-align:center;padding:30px}
+    input{width:80%;padding:15px;margin:15px;font-size:18px;border:2px solid #0f9;background:#111;color:#0f9;border-radius:10px}
+    button{padding:15px 30px;background:#0f9;color:#000;font-weight:bold;border:none;border-radius:10px;font-size:18px}
+    #r{margin:30px;font-size:20px}
+  </style>
+</head>
+<body>
+  <h1>MyLink Ultimate</h1>
+  <p>Enter email or Kenyan number</p>
+  <input id="i" placeholder="0712345678 or name@gmail.com">
+  <button onclick="go()">SEND LINK</button>
+  <div id="r"></div>
+
+  <script>
+    async function go() {
+      const v = document.getElementById('i').value.trim();
+      if (!v) return;
+      document.getElementById('r').innerHTML = "Generating...";
+      const res = await fetch('/send?target='+encodeURIComponent(v));
+      document.getElementById('r').innerHTML = await res.text();
+    }
+  </script>
+</body>
+</html>
