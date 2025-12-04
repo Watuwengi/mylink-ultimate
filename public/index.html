@@ -5,58 +5,49 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>MyLink Ultimate</title>
-  <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <style>
-    body{background:#000;color:#0f9;font-family:Arial;text-align:center;padding:20px}
-    input{width:75%;padding:15px;margin:10px;font-size:18px;border:2px solid #0f9;background:#111;color:#0f9;border-radius:10px;display:inline-block}
+    body{background:#000;color:#0f9;font-family:Arial;text-align:center;padding:20px;margin:0}
+    input{width:75%;padding:15px;margin:10px;font-size:18px;border:2px solid #0f9;background:#111;color:#0f9;border-radius:10px}
     button{padding:15px 25px;background:#0f9;color:#000;font-weight:bold;border:none;border-radius:10px;font-size:16px;margin:5px}
-    #qr canvas{border:5px solid #0f9;border-radius:15px;margin:20px}
+    #qrcode{margin:30px auto;width:300px;height:300px;border:5px solid #0f9;border-radius:15px;background:#000}
     #status{color:#0f0;font-size:20px;margin:20px}
-    #link{color:#0ff;word-break:break-all;padding:10px}
+    #link{color:#0ff;word-break:break-all;padding:10px;font-size:17px}
   </style>
 </head>
 <body>
   <h1>MyLink Ultimate</h1>
-  <p>Enter your Kenyan number (optional for SMS)</p>
+  <p>Enter Kenyan number (optional for SMS)</p>
   <input id="num" placeholder="0710547624">
   <br>
   <button onclick="generateOnly()">GENERATE QR ONLY</button>
   <button onclick="generateAndSMS()">GENERATE QR + SEND SMS</button>
 
   <div id="status"></div>
-  <div id="qr"></div>
+  <div id="qrcode"></div>
   <div id="link"></div>
 
-  <script src="/socket.io/socket.io.js"></script>
   <script>
-    const linkBase = location.origin + '/phone?t=' + Date.now();
+    const baseLink = location.origin + '/phone?t=' + Date.now();
 
-    function showQR(link) {
-      document.getElementById('qr').innerHTML = '<canvas></canvas>';
-      new QRCodeStyling({
-        width: 320, height: 320, data: link,
-        dotsOptions: {color: "#0ff", type: "extra-rounded"},
-        backgroundOptions: {color: "#000"},
-        cornersSquareOptions: {color: "#0f9", type: "extra-rounded"}
-      }).append(document.querySelector('canvas'));
+    function generateQR(link) {
+      document.getElementById('qrcode').innerHTML = '';
+      QRCode.toCanvas(document.getElementById('qrcode'), link, {width: 300, color:{dark:'#0ff', light:'#000'}});
       document.getElementById('link').innerHTML = `<p>Or open manually:</p><a href="${link}">${link}</a>`;
     }
 
-    async function generateOnly() {
+    function generateOnly() {
       document.getElementById('status').innerHTML = 'QR Ready — Scan with phone camera!';
-      showQR(linkBase);
+      generateQR(baseLink);
     }
 
     async function generateAndSMS() {
       const num = document.getElementById('num').value.trim();
-      if (!num) return alert("Enter your number first!");
-
-      document.getElementById('status').innerHTML = 'Generating QR + Sending SMS...';
-      showQR(linkBase);
-
-      const res = await fetch('/send?target=' + encodeURIComponent(num));
-      const txt = await res.text();
-      document.getElementById('status').innerHTML = 'QR Ready + SMS Sent!<br>Check your messages (including spam)';
+      if (!num) return alert('Enter your number first!');
+      document.getElementById('status').innerHTML = 'Sending SMS + Generating QR...';
+      generateQR(baseLink);
+      await fetch('/send?target=' + num);
+      document.getElementById('status').innerHTML = 'QR Ready + SMS Sent! (check messages)';
     }
   </script>
 </body>
