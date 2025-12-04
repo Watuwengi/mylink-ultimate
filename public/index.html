@@ -1,26 +1,63 @@
-<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MyLink Ultimate</title><style>body{background:#000;color:#0f9;font-family:Arial;text-align:center;padding:30px}
-input{width:80%;padding:15px;margin:15px;font-size:18px;border:2px solid #0f9;background:#111;color:#0f9;border-radius:10px}
-button{padding:15px 30px;background:#0f9;color:#000;font-weight:bold;border:none;border-radius:10px;font-size:18px}
-#r{margin:30px;font-size:20px}video{width:100%;max-width:600px;border:4px solid #0f9;border-radius:15px;background:#000}
-.file{background:#111;padding:15px;margin:10px;border-radius:10px}</style></head><body>
-<h1>MyLink Ultimate</h1><p>Enter your Kenyan number</p>
-<input id="i" placeholder="0710547623"><button onclick="go()">SEND LINK</button>
-<div id="r"></div><h2>Your Phone Screen</h2><video id="v" autoplay playsinline controls></video>
-<h2>Send Files to Phone</h2><input type="file" id="f" multiple><button onclick="up()">UPLOAD</button>
-<div id="incoming"></div>
 
-<script src="/socket.io/socket.io.js"></script>
-<script>
-const socket=io(); const v=document.getElementById('v');
-socket.on('offer',async o=>{const pc=new RTCPeerConnection();
-pc.setRemoteDescription(o); const a=await pc.createAnswer(); await pc.setLocalDescription(a);
-socket.emit('answer',a); pc.ontrack=e=>v.srcObject=e.streams[0];});
-socket.on('files',f=>{f.forEach(x=>{document.getElementById('incoming').innerHTML+=`<div class="file"><a href="${x.url}" download="${x.name}">${x.name}</a></div>`;})});
-async function go(){const n=document.getElementById('i').value.trim(); if(!n)return;
-document.getElementById('r').innerHTML="Sending SMS..."; const r=await fetch('/send?target='+n);
-document.getElementById('r').innerHTML=await r.text();}
-function up(){const files=document.getElementById('f').files; if(!files.length)return;
-const form=new FormData(); for(let f of files)form.append('files',f);
-fetch('/upload',{method:'POST',body:form}); document.getElementById('f').value='';}
-</script></body></html>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MyLink Ultimate</title>
+  <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js"></script>
+  <style>
+    body{background:#000;color:#0f9;font-family:Arial;text-align:center;padding:20px}
+    input{width:75%;padding:15px;margin:10px;font-size:18px;border:2px solid #0f9;background:#111;color:#0f9;border-radius:10px;display:inline-block}
+    button{padding:15px 25px;background:#0f9;color:#000;font-weight:bold;border:none;border-radius:10px;font-size:16px;margin:5px}
+    #qr canvas{border:5px solid #0f9;border-radius:15px;margin:20px}
+    #status{color:#0f0;font-size:20px;margin:20px}
+    #link{color:#0ff;word-break:break-all;padding:10px}
+  </style>
+</head>
+<body>
+  <h1>MyLink Ultimate</h1>
+  <p>Enter your Kenyan number (optional for SMS)</p>
+  <input id="num" placeholder="0710547624">
+  <br>
+  <button onclick="generateOnly()">GENERATE QR ONLY</button>
+  <button onclick="generateAndSMS()">GENERATE QR + SEND SMS</button>
+
+  <div id="status"></div>
+  <div id="qr"></div>
+  <div id="link"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const linkBase = location.origin + '/phone?t=' + Date.now();
+
+    function showQR(link) {
+      document.getElementById('qr').innerHTML = '<canvas></canvas>';
+      new QRCodeStyling({
+        width: 320, height: 320, data: link,
+        dotsOptions: {color: "#0ff", type: "extra-rounded"},
+        backgroundOptions: {color: "#000"},
+        cornersSquareOptions: {color: "#0f9", type: "extra-rounded"}
+      }).append(document.querySelector('canvas'));
+      document.getElementById('link').innerHTML = `<p>Or open manually:</p><a href="${link}">${link}</a>`;
+    }
+
+    async function generateOnly() {
+      document.getElementById('status').innerHTML = 'QR Ready — Scan with phone camera!';
+      showQR(linkBase);
+    }
+
+    async function generateAndSMS() {
+      const num = document.getElementById('num').value.trim();
+      if (!num) return alert("Enter your number first!");
+
+      document.getElementById('status').innerHTML = 'Generating QR + Sending SMS...';
+      showQR(linkBase);
+
+      const res = await fetch('/send?target=' + encodeURIComponent(num));
+      const txt = await res.text();
+      document.getElementById('status').innerHTML = 'QR Ready + SMS Sent!<br>Check your messages (including spam)';
+    }
+  </script>
+</body>
+</html>
