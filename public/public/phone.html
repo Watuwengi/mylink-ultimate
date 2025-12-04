@@ -1,14 +1,23 @@
+<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MyLink Phone</title><style>body{background:#000;color:#0f9;text-align:center;padding:20px}
+button{padding:15px 30px;background:#0f9;color:#000;border:none;border-radius:10px;font-size:18px}
+video{width:100%;border:4px solid #0f9;border-radius:15px} .file{background:#111;padding:15px;margin:10px;border-radius:10px}</style></head><body>
+<h1>MyLink Connected</h1>
+<button onclick="start()">START SCREEN SHARE</button>
+<video id="screen" autoplay playsinline muted></video>
+<h2>Files from Laptop</h2><div id="files"></div>
 
-<!DOCTYPE html>
-<html>
-<head>
-  <title>MyLink Phone</title>
-  <style>
-    body{background:#000;color:#0f9;text-align:center;padding:50px;font-size:20px}
-  </style>
-</head>
-<body>
-  <h1>Connected!</h1>
-  <p>Open this page on your phone to control it</p>
-</body>
-</html>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket=io(); let pc=null;
+function start(){
+  navigator.mediaDevices.getDisplayMedia({video:true,audio:true}).then(stream=>{
+    document.getElementById('screen').srcObject=stream;
+    pc=new RTCPeerConnection();
+    stream.getTracks().forEach(t=>pc.addTrack(t,stream));
+    pc.createOffer().then(o=>{pc.setLocalDescription(o); socket.emit('offer',o);});
+    socket.on('answer',a=>pc.setRemoteDescription(a));
+  });
+}
+socket.on('files',f=>{f.forEach(x=>{document.getElementById('files').innerHTML+=`<div class="file"><a href="${x.url}" download="${x.name}">${x.name}</a></div>`;})});
+</script></body></html>
